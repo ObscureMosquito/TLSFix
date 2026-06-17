@@ -121,8 +121,13 @@ static OSStatus (*o_GetNegProto)(SSLContextRef, SSLProtocol *);
 static OSStatus my_GetNegProto(SSLContextRef c, SSLProtocol *p) {
     Shadow *s = sh_get(c);
     OSStatus rv;
-    if (s && s->state == 2) { if (p) *p = ST_TLS12; rv = noErr; }   // legacy enum has no TLS1.3; report 1.2
+    // Spoofer must be active during ST_Connected (2) AND ST_PeerAuth (3)
+    if (s && (s->state == 2 || s->state == 3)) { 
+        if (p) *p = 4; // 4 = kTLSProtocol1
+        rv = noErr; 
+    }
     else rv = o_GetNegProto(c, p);
+    
     sh_release(s);
     return rv;
 }
@@ -130,10 +135,13 @@ static OSStatus (*o_GetNegCipher)(SSLContextRef, UInt32 *);
 static OSStatus my_GetNegCipher(SSLContextRef c, UInt32 *cipher) {
     Shadow *s = sh_get(c);
     OSStatus rv;
-    if (s && s->state == 2) {
-        if (cipher) { const SSL_CIPHER *cs = SSL_get_current_cipher(s->ssl); *cipher = cs ? SSL_CIPHER_get_protocol_id(cs) : 0; }
+    // Spoofer must be active during ST_Connected (2) AND ST_PeerAuth (3)
+    if (s && (s->state == 2 || s->state == 3)) {
+        if (cipher) *cipher = 0x002F; // TLS_RSA_WITH_AES_128_CBC_SHA
         rv = noErr;
-    } else rv = o_GetNegCipher(c, cipher);
+    } 
+    else rv = o_GetNegCipher(c, cipher);
+    
     sh_release(s);
     return rv;
 }
