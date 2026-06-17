@@ -25,7 +25,7 @@ Verification is the OS's job, as the chain received is rebuilt into a `SecTrustR
 ## Install
 
 1. **Install the package**:
-    - Install the DEB file from [releases]() in your preferred manner
+    - Install the DEB file from [releases](https://github.com/ObscureMosquito/TLSFix/releases) in your preferred manner
 
 2. **Install modern roots**: 
     - Go to [tlsroot.litten.ca](https://tlsroot.litten.ca/) in the device you're installing, and install the certificate bundle, TLSFix still needs a modern trust store to verify against.
