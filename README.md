@@ -25,7 +25,7 @@ Verification is the OS's job, as the chain received is rebuilt into a `SecTrustR
 ## Install
 
 1. **Install the package**:
-    - Install the DEB file from [releases]() in your preferred manner
+    - Install the DEB file from [releases](https://github.com/ObscureMosquito/TLSFix/releases) in your preferred manner
 
 2. **Install modern roots**: 
     - Go to [tlsroot.litten.ca](https://tlsroot.litten.ca/) in the device you're installing, and install the certificate bundle, TLSFix still needs a modern trust store to verify against.
@@ -34,15 +34,12 @@ Restart all userspace processes, or reboot.
 
 ## Building from source
 
-Prerequisites: theos at `$HOME/theos` (or set `$THEOS`) with the legacy SDKs, Xcode command-line
+**Prerequisites**: Theos with the legacy SDKs, Xcode command-line
 tools (`xcrun`, `clang`, `lipo`, `ld`), and `ldid`. The prebuilt OpenSSL (`src/openssl/`:
 `lib/libssl.a`, `lib/libcrypto.a`, `include/`) is vendored.
 
 Run `./build-legacy.sh`. It compiles `src/tlsfix_engine.c` and `src/tlsfix_hooks.c` and links each arch
-against its period-correct SDK so `LC_VERSION_MIN` is native (no Mach-O patching): armv6 and armv7 on
-the 5.1 SDK (min 2.0 / 3.0), arm64 on the 7.0 SDK (min 7.0). The slices are `lipo`'d into one fat
-`tlsfix.dylib`, fake-signed, and packaged to `Packages/com.skyglow.tlsfix_1.0.0_iphoneos-arm.deb`.
-`MSHookFunction` is linked directly against CydiaSubstrate.
+against its SDK so `LC_VERSION_MIN`: armv6 and armv7 on the 5.1 SDK (min 2.0 / 3.0), arm64 on the 7.0 SDK (min 7.0).
 
 Source layout:
 
