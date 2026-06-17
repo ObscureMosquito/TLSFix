@@ -244,6 +244,8 @@ int sh_build_trust(Shadow *s, SecTrustRef *trust) {
     if (pol) CFRelease(pol);
     CFRelease(arr);
     if (r != errSecSuccess) return 0;
+    SecTrustResultType rr = kSecTrustResultInvalid;
+    SecTrustEvaluate(t, &rr);   // populate internal chain, a native handshake returns an evaluated trust, and CFNetwork's SocketStream path derefs it (SecTrustCopyExceptions)
     *trust = t;
     return 1;
 }
