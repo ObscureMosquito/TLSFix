@@ -8,6 +8,43 @@
 #include <pthread.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <mach/mach_time.h>
+#include "tlsfix_backpressure.h"
+
+#ifndef TLSFIX_WRITE_WAIT_BACKGROUND_MS
+#define TLSFIX_WRITE_WAIT_BACKGROUND_MS 750
+#endif
+#ifndef TLSFIX_WRITE_WAIT_MAIN_MS
+#define TLSFIX_WRITE_WAIT_MAIN_MS 8
+#endif
+
+static mach_timebase_info_data_t gWriteTimebase;
+static pthread_once_t gWriteClockOnce = PTHREAD_ONCE_INIT;
+
+static void tlsfix_init_write_clock(void) {
+    mach_timebase_info(&gWriteTimebase);
+}
+
+static unsigned long long tlsfix_write_clock(void *context) {
+    (void)context;
+    pthread_once(&gWriteClockOnce, tlsfix_init_write_clock);
+    if (!gWriteTimebase.denom) return 0;
+    return mach_absolute_time() * (unsigned long long)gWriteTimebase.numer /
+           ((unsigned long long)gWriteTimebase.denom * 1000000ULL);
+}
+
+static void tlsfix_write_sleep(void *context, unsigned milliseconds) {
+    (void)context;
+    usleep(milliseconds * 1000U);
+}
+
+static int tlsfix_attempt_transport_write(void *context, const void *data,
+                                          size_t length, size_t *processed) {
+    (void)length;
+    Shadow *s = (Shadow *)context;
+    return (int)s->wf(s->conn, data, processed);
+}
 
 #define MAXSH 256
 static Shadow *gTab[MAXSH];
@@ -108,11 +145,16 @@ void sh_free(SSLContextRef c) {
 
 static int bio_bwrite(BIO *b, const char *buf, int len) {
     Shadow *s = (Shadow *)BIO_get_data(b);
-    size_t n = (size_t)len;
-    OSStatus os = s->wf(s->conn, buf, &n);
+    const unsigned budget = pthread_main_np() ? TLSFIX_WRITE_WAIT_MAIN_MS :
+                                              TLSFIX_WRITE_WAIT_BACKGROUND_MS;
+    TLSFixIOResult write = tlsfix_retry_transport_write(
+        tlsfix_attempt_transport_write, s, buf, (size_t)len,
+        errSSLWouldBlock, budget, tlsfix_write_clock, tlsfix_write_sleep, NULL);
     BIO_clear_retry_flags(b);
-    if (n > 0) return (int)n;
-    if (os == errSSLWouldBlock || os == noErr) { BIO_set_retry_write(b); return -1; }
+    if (write.processed > 0) return (int)write.processed;
+    if (write.status == errSSLWouldBlock || write.status == noErr) {
+        BIO_set_retry_write(b);
+    }
     return -1;
 }
 static int bio_bread(BIO *b, char *buf, int len) {
@@ -202,6 +244,7 @@ int ossl_init(Shadow *s) {
     BIO_set_data(bio, s);
     BIO_set_init(bio, 1);
     SSL_set_bio(s->ssl, bio, bio);
+    SSL_set_mode(s->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
     if (s->host[0]) { SSL_set_tlsext_host_name(s->ssl, s->host); SSL_set1_host(s->ssl, s->host); }
     SSL_set_connect_state(s->ssl);
     if (s->clientX509) {
