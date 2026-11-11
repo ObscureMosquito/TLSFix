@@ -4,7 +4,7 @@ set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 SDKROOT="${THEOS:-$HOME/theos}/sdks"
 OSSL="$DIR/src/openssl"
-SRCS=("$DIR/src/tlsfix_engine.c" "$DIR/src/tlsfix_hooks.c" "$DIR/src/tlsfix_ecc.c")
+SRCS=("$DIR/src/tlsfix_engine.c" "$DIR/src/tlsfix_hooks.c" "$DIR/src/tlsfix_status.c" "$DIR/src/tlsfix_ecc.c")
 [ -f "$OSSL/lib/libssl.a" ] || { echo "missing $OSSL/lib/libssl.a (provide src/openssl: libcrypto.a/libssl.a + include/)"; exit 1; }
 
 typeset -A SDKV MINV

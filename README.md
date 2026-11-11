@@ -51,15 +51,16 @@ Restart all userspace processes, or reboot.
 tools (`xcrun`, `clang`, `lipo`, `ld`), and `ldid`. The prebuilt OpenSSL (`src/openssl/`:
 `lib/libssl.a`, `lib/libcrypto.a`, `include/`) is vendored.
 
-Run `./build-legacy.sh`. It compiles `src/tlsfix_engine.c` and `src/tlsfix_hooks.c` and links each arch
+Run `./build-legacy.sh`. It compiles the files in `src/` and links each arch
 against its SDK so `LC_VERSION_MIN`: armv6 and armv7 on the 5.1 SDK (min 2.0 / 3.0), arm64 on the 7.0 SDK (min 7.0).
 
-Source layout:
+Source stuff:
 
 - `src/tlsfix.h` — shared result codes, the per-connection `Shadow` struct, and the engine API.
 - `src/tlsfix_engine.c` — the OpenSSL core: shadow table, the CFNetwork↔BIO bridge, system-trust
   verification, client-identity signing, and one-time setup.
 - `src/tlsfix_hooks.c` — the Secure Transport hooks and the injection constructor.
+- `src/tlsfix_status.c`which Secure Transport status and session state a failure is reported as.
 - `src/tlsfix.plist` — the MobileSubstrate filter (which processes get injected).
 
 ### Note on Pinning and mutual TLS
@@ -67,7 +68,7 @@ Source layout:
 - As stated before, when an app drives its own trust
   (SSL Pinning), TLSFix defers the decision completely, the app sees the real peer certificate via `SSLCopyPeerTrust` and runs its logic. But the **connection itself is still handled by TLSFix**, it runs the modern handshake and crypto the legacy stack cant. So an app that both validates and pins still gets a connection that was impossible before, TLSFix only hands back the trust result but not the cypher.
 
-- **Mutual TLS works** the same way (APNs, iMessage, and other client-certificate services). The client identity is signed through iOS `SecKeyRawSign` so the private key is never extracted, but the handshake carrying that identity is again TLSFix's modern one, so these services reach servers that now require a cipher the old stack can't speak.
+- **Mutual TLS works** the same way (APNs, iMessage, and other client-certificate services). The client identity is signed through iOS `SecKeyRawSign` so the private key is never extracted, but the handshake carrying that identity is again TLSFix's modern one, so these services work with servers that now require a cipher the old stack dosent have.
 
 ## Credits
 

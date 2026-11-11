@@ -1,13 +1,9 @@
-# Prebuilt OpenSSL (provide src/openssl: lib/{libcrypto,libssl}.a + include/, builtins baked in)
 src/openssl/
-
-# Build output / intermediates
 .build/
 Packages/
 *.deb
 *.dylib
 *.o
-
-# misc
 .DS_Store
 .claude/
+tools/
